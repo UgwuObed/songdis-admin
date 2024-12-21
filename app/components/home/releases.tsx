@@ -41,20 +41,31 @@ const Releases = () => {
         if (!token) {
           throw new Error('Authentication token not found');
         }
-
-        const [singlesResponse, albumsResponse] = await Promise.all([
-          axios.get(`${BASE_URL}/api/admin/singles`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${BASE_URL}/api/admin/albums`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+    
+        const fetchData = async (endpoint: string) => {
+          try {
+            const response = await axios.get(`${BASE_URL}${endpoint}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            return response.data.data;
+          } catch (error) {
+            // If it's a 404, return empty array
+            if (axios.isAxiosError(error) && error.response?.status === 404) {
+              return [];
+            }
+            throw error;
+          }
+        };
+    
+        const [singlesData, albumsData] = await Promise.all([
+          fetchData('/api/admin/singles'),
+          fetchData('/api/admin/albums')
         ]);
-
-        console.log('Fetched albums:', albumsResponse.data.data);
-        console.log('Fetched singles:', singlesResponse.data.data);
-        setSingles(singlesResponse.data.data);
-        setAlbums(albumsResponse.data.data);
+    
+        console.log('Fetched albums:', albumsData);
+        console.log('Fetched singles:', singlesData);
+        setSingles(singlesData);
+        setAlbums(albumsData);
         setError(null);
       } catch (error) {
         console.error('Error fetching releases:', error);
@@ -63,7 +74,6 @@ const Releases = () => {
         setLoading(false);
       }
     };
-
     fetchReleases();
   }, []);
 
