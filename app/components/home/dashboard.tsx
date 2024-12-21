@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Music, Users, Play, Download, DollarSign, Settings, HelpCircle, Bell } from 'lucide-react';
+import { Music, Users, Play, DollarSign } from 'lucide-react';
 import {
   ChartBarIcon,
   MusicalNoteIcon,
