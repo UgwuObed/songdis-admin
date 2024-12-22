@@ -65,6 +65,11 @@ const Dashboard = () => {
               <CurrencyDollarIcon className="w-6 h-6" />
               <span>Earnings</span>
             </a>
+
+            <a className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10" href="/promo">
+              <CurrencyDollarIcon className="w-6 h-6" />
+              <span>Promo</span>
+            </a>
           </nav>
         </div>
         <div className="p-6 mt-auto">
@@ -195,5 +200,4 @@ const Dashboard = () => {
     </div>
   );
 };
-
 export default Dashboard;

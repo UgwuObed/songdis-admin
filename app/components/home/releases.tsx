@@ -49,7 +49,6 @@ const Releases = () => {
             });
             return response.data.data;
           } catch (error) {
-            // If it's a 404, return empty array
             if (axios.isAxiosError(error) && error.response?.status === 404) {
               return [];
             }
