@@ -89,10 +89,9 @@ const PromoManager = () => {
     setError(null);
     try {
       const response = await postData("/api/promo-codes/generate", payload);
-      // Handle both single promo code and array responses
+  
       const newCodes = Array.isArray(response) ? response : response ? [response] : [];
       
-      // Validate that each code has the required properties
       const validCodes = newCodes.filter((code): code is PromoCode => {
         return (
           typeof code === 'object' &&
