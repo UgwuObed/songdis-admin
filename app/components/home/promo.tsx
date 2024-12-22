@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Loader2, AlertCircle } from "lucide-react";
