@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { BASE_URL } from '../apiConfig';
 import axios from 'axios';
-import { Download, Music, Image, X } from 'lucide-react';
+import { Download, Music, Image, X, CheckCircle } from 'lucide-react';
 
 
 interface ReleaseData {
@@ -25,6 +25,7 @@ interface ReleaseData {
   upc_code: string;
   isrc_code: string | null;
   upload_type: string;
+  status: string;
 }
 
 const Releases = () => {
@@ -33,6 +34,7 @@ const Releases = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRelease, setSelectedRelease] = useState<ReleaseData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<number | string | null>(null);
 
   useEffect(() => {
     const fetchReleases = async () => {
@@ -103,6 +105,36 @@ const Releases = () => {
     }
   };
 
+  const handleUpdateStatus = async (id: number | string) => {
+    try {
+      setUpdating(id);
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Authentication token not found');
+
+      await axios.put(
+        `${BASE_URL}/api/admin/music/${id}/status`,
+        { status: 'complete' },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+
+      // Update local state
+      const updateReleaseStatus = (releases: ReleaseData[]) =>
+        releases.map(release => 
+          release.id === id ? { ...release, status: 'complete' } : release
+        );
+
+      setSingles(updateReleaseStatus(singles));
+      setAlbums(updateReleaseStatus(albums));
+
+      setError(null);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      setError('Failed to update status. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const handleDownload = async (url: string, filename: string) => {
     try {
       const response = await fetch(url);
@@ -125,7 +157,7 @@ const Releases = () => {
     }
   };
 
-  const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
+const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
     return (
       <div className="overflow-x-auto bg-white shadow-lg rounded-lg mt-6">
         <table className="min-w-full table-auto">
@@ -137,7 +169,8 @@ const Releases = () => {
               <th className="px-6 py-3 text-left">Primary Artist</th>
               <th className="px-6 py-3 text-left">Release Date</th>
               <th className="px-6 py-3 text-left">Genre</th>
-              <th className="px-6 py-3 text-left">Action</th>
+              <th className="px-6 py-3 text-left">Status</th>
+              <th className="px-6 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -148,12 +181,33 @@ const Releases = () => {
                 <td className="px-6 py-4">{new Date(release.release_date).toLocaleDateString()}</td>
                 <td className="px-6 py-4">{release.primary_genre}</td>
                 <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded-full text-sm ${
+                    release.status === 'complete' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {release.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 space-x-2">
                   <button
                     onClick={() => handleViewRelease(release.id, type)}
                     className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none transition-colors duration-200"
                   >
                     View Details
                   </button>
+                  {release.status !== 'complete' && (
+                    <button
+                      onClick={() => handleUpdateStatus(release.id)}
+                      disabled={updating === release.id}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none transition-colors duration-200 disabled:bg-gray-400 flex items-center gap-2"
+                    >
+                      {updating === release.id ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
+                      ) : (
+                        <CheckCircle size={16} />
+                      )}
+                      Mark Complete
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
