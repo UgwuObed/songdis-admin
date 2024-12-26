@@ -1,8 +1,10 @@
 "use client"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BASE_URL } from '../apiConfig';
+import axios from 'axios';
 import { Music, Users, Play, DollarSign } from 'lucide-react';
 import {
   ChartBarIcon,
@@ -19,6 +21,34 @@ import {
 const Dashboard = () => {
   const router = useRouter();
 
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+
+  useEffect(() => {
+    const fetchTotalUsers = async () => {
+      try {
+        const token = localStorage.getItem('token'); 
+        if (!token) {
+          setError('No token found.');
+          return;
+        }
+
+        const response = await axios.get(`${BASE_URL}/api/admin/users`,  {
+          headers: {
+            Authorization: `Bearer ${token}`, 
+          },
+        });
+
+        setTotalUsers(response.data.count);
+      } catch (err) {
+        setError('Error fetching users.');
+        console.error(err);
+      }
+    };
+
+    fetchTotalUsers();
+  }, []);
 
   const revenueData = [
     { name: 'Jan', value: 4000 },
@@ -109,7 +139,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Total Artists</p>
-                  <p className="text-2xl font-bold">1,234</p>
+                  <p className="text-2xl font-bold">{totalUsers !== null ? totalUsers.toLocaleString() : 'Loading...'}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                   <Users className="w-6 h-6 text-purple-600" />
