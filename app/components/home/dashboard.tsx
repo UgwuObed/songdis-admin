@@ -22,15 +22,13 @@ const Dashboard = () => {
   const router = useRouter();
 
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
+  
 
   useEffect(() => {
     const fetchTotalUsers = async () => {
       try {
         const token = localStorage.getItem('token'); 
         if (!token) {
-          setError('No token found.');
           return;
         }
 
@@ -231,3 +229,7 @@ const Dashboard = () => {
   );
 };
 export default Dashboard;
+function setError(arg0: string) {
+  throw new Error('Function not implemented.');
+}
+
