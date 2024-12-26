@@ -1,5 +1,4 @@
 "use client"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -18,35 +17,78 @@ import {
   BellIcon
 } from '@heroicons/react/24/outline';
 
+interface User {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  email_verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+  account_type: string;
+}
+
+interface PaginatedResponse {
+  current_page: number;
+  data: User[];
+  first_page_url: string;
+  from: number;
+  last_page: number;
+  last_page_url: string;
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number;
+  total: number;
+}
+
+interface ApiResponse {
+  status: string;
+  message: string;
+  count: number;
+  data: PaginatedResponse;
+}
+
 const Dashboard = () => {
   const router = useRouter();
-
-  const [totalUsers, setTotalUsers] = useState<number | null>(null);
-  
+  const [userCount, setUserCount] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTotalUsers = async () => {
       try {
-        const token = localStorage.getItem('token'); 
+        setIsLoading(true);
+        const token = localStorage.getItem('token');
         if (!token) {
+          router.push('/login');
           return;
         }
-
-        const response = await axios.get(`${BASE_URL}/api/admin/users`,  {
+    
+        const response = await axios.get<ApiResponse>(`${BASE_URL}/api/admin/users`, {
           headers: {
-            Authorization: `Bearer ${token}`, 
+            Authorization: `Bearer ${token}`,
           },
         });
-
-        setTotalUsers(response.data.count);
+    
+        const count = response.data.count ?? 0; // Default to 0 if undefined
+        setUserCount(count);
       } catch (err) {
-        setError('Error fetching users.');
-        console.error(err);
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          router.push('/login');
+        } else {
+          setError('Error fetching user data');
+          console.error(err);
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
+    
 
     fetchTotalUsers();
-  }, []);
+  }, [router]);
 
   const revenueData = [
     { name: 'Jan', value: 4000 },
@@ -62,6 +104,13 @@ const Dashboard = () => {
     router.push('/login');
   };
 
+  const renderTotalUsers = () => {
+    if (isLoading) return 'Loading...';
+    if (error) return 'Error loading data';
+    if (userCount === null || userCount === undefined) return '0'; // Explicit null/undefined check
+    return userCount.toLocaleString(); // Only call on valid numbers
+  };
+  
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -137,7 +186,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Total Artists</p>
-                  <p className="text-2xl font-bold">{totalUsers !== null ? totalUsers.toLocaleString() : 'Loading...'}</p>
+                  <p className="text-2xl font-bold">{renderTotalUsers()}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                   <Users className="w-6 h-6 text-purple-600" />
@@ -229,7 +278,3 @@ const Dashboard = () => {
   );
 };
 export default Dashboard;
-function setError(arg0: string) {
-  throw new Error('Function not implemented.');
-}
-
