@@ -14,7 +14,8 @@ import {
   CurrencyDollarIcon,
   Cog6ToothIcon,
   QuestionMarkCircleIcon,
-  BellIcon
+  BellIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 
 interface User {
@@ -72,7 +73,7 @@ const Dashboard = () => {
           },
         });
     
-        const count = response.data.count ?? 0; // Default to 0 if undefined
+        const count = response.data.count ?? 0; 
         setUserCount(count);
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -107,8 +108,8 @@ const Dashboard = () => {
   const renderTotalUsers = () => {
     if (isLoading) return 'Loading...';
     if (error) return 'Error loading data';
-    if (userCount === null || userCount === undefined) return '0'; // Explicit null/undefined check
-    return userCount.toLocaleString(); // Only call on valid numbers
+    if (userCount === null || userCount === undefined) return '0'; 
+    return userCount.toLocaleString(); 
   };
   
   return (
@@ -141,6 +142,11 @@ const Dashboard = () => {
             <a className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10" href="#">
               <CurrencyDollarIcon className="w-6 h-6" />
               <span>Earnings</span>
+            </a>
+
+            <a className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10" href="/email">
+              <EnvelopeIcon className="w-6 h-6" />
+              <span>Email Marketing</span>
             </a>
 
             <a className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10" href="/promo">
