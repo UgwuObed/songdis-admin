@@ -3,10 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios, { AxiosError } from 'axios';
 import { BASE_URL } from '../apiConfig';
 import { 
-  CheckIcon, 
   ArrowPathIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 interface ApiResponse {
