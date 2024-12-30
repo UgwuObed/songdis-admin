@@ -6,16 +6,16 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 
-interface ApiResponse {
-  status: string;
-  message: string;
-  count: number;
-  data: {
-    current_page: number;
-    last_page: number;
-    data: User[];  
-  };
-}
+// interface ApiResponse {
+//   status: string;
+//   message: string;
+//   count: number;
+//   data: {
+//     current_page: number;
+//     last_page: number;
+//     data: User[];  
+//   };
+// }
 
 interface User {
   id: number;
