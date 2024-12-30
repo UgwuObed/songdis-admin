@@ -44,8 +44,8 @@ const BulkEmailManager: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);  // Track the current page
-  const [totalPages, setTotalPages] = useState(1);  // Track total pages
+  const [currentPage, setCurrentPage] = useState(1);  
+  const [totalPages, setTotalPages] = useState(1);  
 
   useEffect(() => {
     fetchUsers(currentPage);
@@ -78,8 +78,8 @@ const BulkEmailManager: React.FC = () => {
   
       if (response.data.data?.data && Array.isArray(response.data.data.data)) {
         setUsers(response.data.data.data);
-        setCurrentPage(response.data.data.current_page);  // Update current page
-        setTotalPages(response.data.data.last_page);  // Update total pages
+        setCurrentPage(response.data.data.current_page); 
+        setTotalPages(response.data.data.last_page); 
       } else {
         setError('Unexpected data format received from server');
         setUsers([]);
@@ -157,7 +157,7 @@ const BulkEmailManager: React.FC = () => {
     }
   };
 
-  // Determine if all users on the current page are selected
+ 
   const isAllSelected = users.length > 0 && selectedUsers.length === users.length;
 
   return (
@@ -208,6 +208,27 @@ const BulkEmailManager: React.FC = () => {
                 </div>
               ))}
             </div>
+
+
+            {result && (
+  <div className={`p-4 ${result.success ? 'bg-green-100' : 'bg-red-100'}`}>
+    <p>{result.message}</p>
+    {result.details && (
+      <>
+        <p>Success Count: {result.details.successCount}</p>
+        <p>Failed Emails: {result.details.failedEmails.join(', ')}</p>
+      </>
+    )}
+  </div>
+)}
+
+{error && (
+  <div className="p-4 bg-red-100 text-red-700">
+    <p>{error}</p>
+  </div>
+)}
+
+
 
             {/* Pagination controls */}
             <div className="flex justify-between mt-4">
