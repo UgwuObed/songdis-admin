@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import React, { useEffect, useState } from 'react';
@@ -63,8 +64,7 @@ const Releases = () => {
             const response = await axios.get(`${BASE_URL}${endpoint}`, {
               headers: { Authorization: `Bearer ${token}` },
             });
-        
-            // Transform the data to match the expected structure
+    
             const transformedData = response.data.data.map((item: any) => ({
               id: item.id,
               track_title: item.track_title || null,
