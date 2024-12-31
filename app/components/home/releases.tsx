@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { BASE_URL } from '../apiConfig';
 import axios from 'axios';
-import { Download, Music, Image, X, CheckCircle } from 'lucide-react';
+import { Download, Music, Image, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 
 interface ReleaseData {
@@ -28,6 +28,18 @@ interface ReleaseData {
   status: string;
 }
 
+interface StatusOption {
+  value: string;
+  label: string;
+  color: string;
+}
+
+const statusOptions: StatusOption[] = [
+  { value: 'Delivered', label: 'Mark as Delivered', color: 'bg-green-600 hover:bg-green-700' },
+  { value: 'Live', label: 'Mark as Live', color: 'bg-blue-600 hover:bg-blue-700' },
+  { value: 'NeedDoc', label: 'Need Documentation', color: 'bg-yellow-600 hover:bg-yellow-700' }
+];
+
 const Releases = () => {
   const [singles, setSingles] = useState<ReleaseData[]>([]);
   const [albums, setAlbums] = useState<ReleaseData[]>([]);
@@ -35,6 +47,8 @@ const Releases = () => {
   const [selectedRelease, setSelectedRelease] = useState<ReleaseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<number | string | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  
 
   useEffect(() => {
     const fetchReleases = async () => {
@@ -49,7 +63,31 @@ const Releases = () => {
             const response = await axios.get(`${BASE_URL}${endpoint}`, {
               headers: { Authorization: `Bearer ${token}` },
             });
-            return response.data.data;
+        
+            // Transform the data to match the expected structure
+            const transformedData = response.data.data.map((item: any) => ({
+              id: item.id,
+              track_title: item.track_title || null,
+              release_title: item.release_title || null,
+              primary_artist: item.primary_artist,
+              featured_artists: item.featured_artists || null,
+              producers: item.producers || null,
+              explicit_content: item.explicit_content || 0,
+              primary_genre: item.primary_genre,
+              secondary_genre: item.secondary_genre || null,
+              release_date: item.release_date,
+              album_art_url: item.album_art_url || null,
+              platforms: item.platforms || '',
+              lyrics: item.lyrics || null,
+              genres_moods: item.genres_moods || null,
+              audio_file_path: item.audio_file_path || null,
+              upc_code: item.upc_code,
+              isrc_code: item.isrc_code || null,
+              upload_type: item.upload_type,
+              status: item.status || 'Pending',
+            }));
+        
+            return transformedData;
           } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 404) {
               return [];
@@ -57,6 +95,7 @@ const Releases = () => {
             throw error;
           }
         };
+        
     
         const [singlesData, albumsData] = await Promise.all([
           fetchData('/api/admin/singles'),
@@ -105,27 +144,27 @@ const Releases = () => {
     }
   };
 
-  const handleUpdateStatus = async (id: number | string) => {
+  const handleUpdateStatus = async (id: number | string, newStatus: string) => {
     try {
       setUpdating(id);
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Authentication token not found');
-
+  
       await axios.put(
         `${BASE_URL}/api/admin/music/${id}/status`,
-        { status: 'complete' },
+        { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` }}
       );
-
+  
       // Update local state
       const updateReleaseStatus = (releases: ReleaseData[]) =>
         releases.map(release => 
-          release.id === id ? { ...release, status: 'complete' } : release
+          release.id === id ? { ...release, status: newStatus } : release
         );
-
+  
       setSingles(updateReleaseStatus(singles));
       setAlbums(updateReleaseStatus(albums));
-
+  
       setError(null);
     } catch (error) {
       console.error('Error updating status:', error);
@@ -134,6 +173,23 @@ const Releases = () => {
       setUpdating(null);
     }
   };
+  
+  const getStatusColor = (status: string | undefined | null) => {
+    const normalizedStatus = (status || 'Pending').toLowerCase();
+    switch (normalizedStatus) {
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      case 'live':
+        return 'bg-blue-100 text-blue-800';
+      case 'needdoc':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'pending':
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+  
+
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -181,42 +237,61 @@ const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
                 <td className="px-6 py-4">{new Date(release.release_date).toLocaleDateString()}</td>
                 <td className="px-6 py-4">{release.primary_genre}</td>
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    release.status === 'complete' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {release.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 space-x-2">
+                <span className={`px-2 py-1 rounded-full text-sm ${getStatusColor(release.status || 'Pending')}`}>
+                {release.status || 'Pending'}
+              </span>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={() => handleViewRelease(release.id, type)}
                     className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none transition-colors duration-200"
                   >
                     View Details
                   </button>
-                  {release.status !== 'complete' && (
-                    <button
-                      onClick={() => handleUpdateStatus(release.id)}
-                      disabled={updating === release.id}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none transition-colors duration-200 disabled:bg-gray-400 flex items-center gap-2"
-                    >
-                      {updating === release.id ? (
-                        <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
-                      ) : (
-                        <CheckCircle size={16} />
+                  {release.status.toLowerCase() !== 'Live' && (
+                    <div className="relative group">
+                      <button
+                        onClick={() => setActiveDropdown(activeDropdown === release.id.toString() ? null : release.id.toString())}
+                        disabled={updating === release.id}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none transition-colors duration-200 disabled:bg-gray-400 flex items-center gap-2"
+                      >
+                        {updating === release.id ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
+                        ) : (
+                          <>
+                            <AlertCircle size={16} />
+                            Update Status
+                          </>
+                        )}
+                      </button>
+                      {activeDropdown === release.id.toString() && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                          {statusOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() => {
+                                handleUpdateStatus(release.id, option.value);
+                                setActiveDropdown(null);
+                              }}
+                              className={`w-full text-left px-4 py-2 text-sm text-white ${option.color} hover:opacity-90 first:rounded-t-md last:rounded-b-md`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
                       )}
-                      Mark Complete
-                    </button>
+                    </div>
                   )}
-                </td>
-              </tr>
-            ))}
+                </div>
+              </td>
+            </tr>
+          ))}
           </tbody>
         </table>
       </div>
     );
   };
-
   const renderReleaseDetails = (release: ReleaseData) => {
     if (!release) return null;
 
