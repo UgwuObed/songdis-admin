@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { BASE_URL } from '../apiConfig';
 import axios from 'axios';
-import { Download, Music, Image, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Download, Music, Image, X, AlertCircle } from 'lucide-react';
 
 
 interface ReleaseData {
