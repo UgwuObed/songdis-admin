@@ -4,8 +4,17 @@
 import React, { useEffect, useState } from 'react';
 import { BASE_URL } from '../apiConfig';
 import axios from 'axios';
-import { Download, Music, Image, X, AlertCircle } from 'lucide-react';
+import { Download, Music, Image, X, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
+interface Track {
+  id: number;
+  track_title: string;
+  track_number?: number;
+  featured_artists: string | null;
+  producers: string | null;
+  isrc_code: string | null;
+  audio_file_path: string | null;
+}
 
 interface ReleaseData {
   id: number | string;
@@ -26,7 +35,13 @@ interface ReleaseData {
   upc_code: string;
   isrc_code: string | null;
   upload_type: string;
-  status: string;
+  status?: string; 
+  tracks?: Track[];
+}
+
+interface GroupedReleaseData extends ReleaseData {
+  isExpanded?: boolean;
+  tracks: Track[];
 }
 
 interface StatusOption {
@@ -43,80 +58,116 @@ const statusOptions: StatusOption[] = [
 
 const Releases = () => {
   const [singles, setSingles] = useState<ReleaseData[]>([]);
-  const [albums, setAlbums] = useState<ReleaseData[]>([]);
+  // const [albums, setAlbums] = useState<ReleaseData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRelease, setSelectedRelease] = useState<ReleaseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<number | string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  
+  const [albums, setAlbums] = useState<GroupedReleaseData[]>([]);
+
+  const fetchData = async (endpoint: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Authentication token not found');
+
+    const response = await axios.get(`${BASE_URL}${endpoint}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return response.data.data || response.data;
+  };
 
   useEffect(() => {
     const fetchReleases = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
-    
-        const fetchData = async (endpoint: string) => {
-          try {
-            const response = await axios.get(`${BASE_URL}${endpoint}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-    
-            const transformedData = response.data.data.map((item: any) => ({
-              id: item.id,
-              track_title: item.track_title || null,
-              release_title: item.release_title || null,
-              primary_artist: item.primary_artist,
-              featured_artists: item.featured_artists || null,
-              producers: item.producers || null,
-              explicit_content: item.explicit_content || 0,
-              primary_genre: item.primary_genre,
-              secondary_genre: item.secondary_genre || null,
-              release_date: item.release_date,
-              album_art_url: item.album_art_url || null,
-              platforms: item.platforms || '',
-              lyrics: item.lyrics || null,
-              genres_moods: item.genres_moods || null,
-              audio_file_path: item.audio_file_path || null,
-              upc_code: item.upc_code,
-              isrc_code: item.isrc_code || null,
-              upload_type: item.upload_type,
-              status: item.status || 'Pending',
-            }));
-        
-            return transformedData;
-          } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status === 404) {
-              return [];
-            }
-            throw error;
-          }
-        };
-        
-    
-        const [singlesData, albumsData] = await Promise.all([
+        if (!token) throw new Error('Authentication token not found');
+
+        const [singlesData, albumsResponse] = await Promise.all([
           fetchData('/api/admin/singles'),
           fetchData('/api/admin/albums')
         ]);
-    
-        console.log('Fetched albums:', albumsData);
-        console.log('Fetched singles:', singlesData);
+
         setSingles(singlesData);
-        setAlbums(albumsData);
-        setError(null);
+
+        const albumsData = Array.isArray(albumsResponse.data) ? albumsResponse.data : albumsResponse;
+
+        const uniqueAlbumsMap = new Map();
+        
+        albumsData.forEach((album: any) => {
+          const key = `${album.release_title}-${album.primary_artist}`;
+          if (!uniqueAlbumsMap.has(key)) {
+            uniqueAlbumsMap.set(key, album);
+          }
+        });
+
+  
+        const processedAlbums = Array.from(uniqueAlbumsMap.values()).map(album => ({
+          ...album,
+          isExpanded: false,
+          tracks: (album.tracks || []).sort((a: Track, b: Track) => 
+            (a.track_number || 0) - (b.track_number || 0)
+          )
+        }));
+
+        console.log('Deduplicated albums:', processedAlbums);
+        setAlbums(processedAlbums);
       } catch (error) {
         console.error('Error fetching releases:', error);
-        setError('Failed to load releases. Please try again later.');
+        setError('Failed to load releases');
       } finally {
         setLoading(false);
       }
     };
+
     fetchReleases();
   }, []);
 
+  const toggleAlbumExpansion = (albumId: number | string) => {
+    setAlbums(prevAlbums => 
+      prevAlbums.map(album => 
+        album.id === albumId 
+          ? { ...album, isExpanded: !album.isExpanded }
+          : album
+      )
+    );
+  };
+
+  const renderStatusDropdown = (release: ReleaseData) => (
+    <div className="relative group">
+      <button
+        onClick={() => setActiveDropdown(activeDropdown === release.id.toString() ? null : release.id.toString())}
+        disabled={updating === release.id}
+        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none transition-colors duration-200 disabled:bg-gray-400 flex items-center gap-2"
+      >
+        {updating === release.id ? (
+          <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
+        ) : (
+          <>
+            <AlertCircle size={16} />
+            Update Status
+          </>
+        )}
+      </button>
+      {activeDropdown === release.id.toString() && (
+        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+          {statusOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => {
+                handleUpdateStatus(release.id, option.value);
+                setActiveDropdown(null);
+              }}
+              className={`w-full text-left px-4 py-2 text-sm text-white ${option.color} hover:opacity-90 first:rounded-t-md last:rounded-b-md`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+  
   const handleViewRelease = async (id: number | string, type: 'single' | 'album') => {
     try {
       const token = localStorage.getItem('token');
@@ -156,14 +207,17 @@ const Releases = () => {
         { headers: { Authorization: `Bearer ${token}` }}
       );
   
-      // Update local state
-      const updateReleaseStatus = (releases: ReleaseData[]) =>
-        releases.map(release => 
+      setSingles(prevSingles => 
+        prevSingles.map(release => 
           release.id === id ? { ...release, status: newStatus } : release
-        );
-  
-      setSingles(updateReleaseStatus(singles));
-      setAlbums(updateReleaseStatus(albums));
+        )
+      );
+      
+      setAlbums(prevAlbums => 
+        prevAlbums.map(album => 
+          album.id === id ? { ...album, status: newStatus } : album
+        )
+      );
   
       setError(null);
     } catch (error) {
@@ -189,15 +243,34 @@ const Releases = () => {
     }
   };
   
+  
 
 
   const handleDownload = async (url: string, filename: string) => {
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Download failed');
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Authentication token not found');
+  
+      let actualUrl = url;
+      try {
+        const parsed = JSON.parse(url); 
+        actualUrl = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : url;
+      } catch {
+        actualUrl = url;
       }
-      
+  
+      const fullUrl = actualUrl.startsWith('http') ? actualUrl : `${BASE_URL}${actualUrl}`;
+  
+      const response = await fetch(fullUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -207,11 +280,16 @@ const Releases = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error downloading file:', error);
-      setError('Failed to download file. Please try again.');
+      if (error instanceof Error) {
+        setError(`Failed to download file: ${error.message}`);
+      } else {
+        setError('Failed to download file: An unknown error occurred');
+      }
     }
   };
+  
 
 const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
     return (
@@ -249,40 +327,7 @@ const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
                   >
                     View Details
                   </button>
-                  {release.status.toLowerCase() !== 'Live' && (
-                    <div className="relative group">
-                      <button
-                        onClick={() => setActiveDropdown(activeDropdown === release.id.toString() ? null : release.id.toString())}
-                        disabled={updating === release.id}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none transition-colors duration-200 disabled:bg-gray-400 flex items-center gap-2"
-                      >
-                        {updating === release.id ? (
-                          <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
-                        ) : (
-                          <>
-                            <AlertCircle size={16} />
-                            Update Status
-                          </>
-                        )}
-                      </button>
-                      {activeDropdown === release.id.toString() && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                          {statusOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => {
-                                handleUpdateStatus(release.id, option.value);
-                                setActiveDropdown(null);
-                              }}
-                              className={`w-full text-left px-4 py-2 text-sm text-white ${option.color} hover:opacity-90 first:rounded-t-md last:rounded-b-md`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {(!release.status || release.status.toLowerCase() !== 'live') && renderStatusDropdown(release)}
                 </div>
               </td>
             </tr>
@@ -292,6 +337,107 @@ const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
       </div>
     );
   };
+
+  const renderAlbumsTable = (data: GroupedReleaseData[]) => (
+    <div className="overflow-x-auto bg-white shadow-lg rounded-lg mt-6">
+      <table className="min-w-full table-auto">
+        <thead className="bg-red-600 text-white">
+          <tr>
+            <th className="w-8"></th>
+            <th className="px-6 py-3 text-left">Release Title</th>
+            <th className="px-6 py-3 text-left">Primary Artist</th>
+            <th className="px-6 py-3 text-left">Release Date</th>
+            <th className="px-6 py-3 text-left">Genre</th>
+            <th className="px-6 py-3 text-left">Status</th>
+            <th className="px-6 py-3 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((release) => (
+            <React.Fragment key={release.id}>
+              <tr className="border-b hover:bg-red-50">
+                <td className="px-2">
+                  <button 
+                    onClick={() => toggleAlbumExpansion(release.id)}
+                    className="p-1 hover:bg-red-100 rounded"
+                  >
+                    {release.isExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </td>
+                <td className="px-6 py-4 font-medium">{release.release_title || 'Untitled'}</td>
+                <td className="px-6 py-4">{release.primary_artist}</td>
+                <td className="px-6 py-4">{new Date(release.release_date).toLocaleDateString()}</td>
+                <td className="px-6 py-4">{release.primary_genre}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded-full text-sm ${getStatusColor(release.status)}`}>
+                    {release.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleViewRelease(release.id, 'album')}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    >
+                      View Details
+                    </button>
+                    {(!release.status || release.status.toLowerCase() !== 'live') && renderStatusDropdown(release)}
+                  </div>
+                </td>
+              </tr>
+              {release.isExpanded && release.tracks.map((track, index) => (
+                <tr key={`${release.id}-track-${track.id}`} className="bg-gray-50 border-b">
+                  <td className="px-2"></td>
+                  <td className="px-6 py-3 pl-12">
+                    <div className="flex items-center">
+                      <span className="text-gray-400 mr-2">{index + 1}.</span>
+                      <span>{track.track_title}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3">
+                    {track.featured_artists && (
+                      <span className="text-gray-500">ft. {track.featured_artists}</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3">
+                    {track.producers && (
+                      <span className="text-gray-500">Prod. {track.producers}</span>
+                    )}
+                  </td>
+                  <td colSpan={3} className="px-6 py-3">
+                    <div className="flex items-center gap-2">
+                      {track.isrc_code && (
+                        <span className="text-sm text-gray-500">ISRC: {track.isrc_code}</span>
+                      )}
+                      {track.audio_file_path && (
+                        <button
+                          onClick={() => {
+                            const fileName = `${track.track_title || `track-${track.track_number}`}.wav`;
+                            if (track.audio_file_path) {
+                              handleDownload(track.audio_file_path, fileName);
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Download size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+
   const renderReleaseDetails = (release: ReleaseData) => {
     if (!release) return null;
 
@@ -398,7 +544,7 @@ const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-800">Audio Preview</h3>
                   <button
-                    onClick={() => handleDownload(audioFilePath, `${title}.mp3`)}
+                    onClick={() => handleDownload(audioFilePath, `${title}.wav`)}
                     className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
                   >
                     <Download size={18} />
@@ -448,7 +594,7 @@ const renderTable = (data: ReleaseData[], type: 'single' | 'album') => {
                   <Image size={24} />
                   Albums/EPs
                 </h2>
-                {renderTable(albums, 'album')}
+                {renderAlbumsTable(albums)}
               </div>
             </div>
           </div>
