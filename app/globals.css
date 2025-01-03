@@ -1,21 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla:wght@200;300;400;500;600;700;800&display=swap');
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  /* Base theme colors */
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Main colors */
+  --primary: #ff0000;
+  --secondary: #00ff00;
+  --accent: #0000ff;
+  
+  /* Color variations */
+  --primary-light: #ff4d4d;
+  --primary-dark: #cc0000;
+  --secondary-light: #4dff4d;
+  --secondary-dark: #00cc00;
+  --accent-light: #4d4dff;
+  --accent-dark: #0000cc;
+  
+  /* Additional colors for existing styles */
+  --banner-overlay: rgba(156, 71, 71, 0.4);
+  --footer-bg: rgba(255, 255, 255, 0.25);
+  --scrollbar: #888;
+  --scrollbar-hover: #555;
+  
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --banner-overlay: rgba(156, 71, 71, 0.6);
+    --footer-bg: rgba(255, 255, 255, 0.1);
+    color-scheme: dark;
   }
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+    font-family: 'Poppins', sans-serif;
+    color: var(--foreground);
+    background: var(--background);
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#root {
+    height: 100%;
+}
+
+.leafbutton {
+    border-radius: 0px 30px 30px 40px;
+}
+
+.banner-image {
+    background-image: 
+      linear-gradient(to bottom, rgba(255, 255, 255, 0) 70%, var(--background) 100%), 
+      url('/assets/banner/music.jpg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    background-attachment: fixed; 
+    position: relative;
+    z-index: 1;
+}
+
+.banner-image::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--banner-overlay);
+    z-index: -1; 
+}
+
+hr {
+    border-color: var(--primary);
+}
+
+.w-270 {
+    width: 270px;
+}
+
+@media screen and (min-width: 1000px) {
+    .lh-96 {
+        line-height: 96px !important;
+    }
+
+    .lh-81 {
+        line-height: 81px !important;
+    }
+
+    .lh-33 {
+        line-height: 33px !important;
+    }
+}
+
+.bg-image-what {
+    background-image: url('/assets/clientsay/bgimage.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+/* Footer */
+.footer-icons {
+    box-shadow: 0px 19px 28px rgba(0, 0, 0, 0.1);
+    background-color: var(--footer-bg);
+    border-radius: 50%;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.footer-icons:hover {
+    transform: translateY(-8px);
+}
+
+.footer-fb-icons {
+    box-shadow: 0px 19px 28px rgba(0, 0, 0, 0.1);
+    background-color: var(--footer-bg);
+    border-radius: 50%;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.footer-fb-icons:hover {
+    transform: translateY(-8px);
+}
+
+.space-links:hover {
+    letter-spacing: 1px;
+    transition: letter-spacing 0.3s ease;
+}
+
+/* Utility classes for the new color system */
+.text-primary { color: var(--primary); }
+.text-secondary { color: var(--secondary); }
+.text-accent { color: var(--accent); }
+
+.bg-primary { background-color: var(--primary); }
+.bg-secondary { background-color: var(--secondary); }
+.bg-accent { background-color: var(--accent); }
+
+@layer utilities {
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+    }
+  
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar);
+        border-radius: 10px;
+    }
+  
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: var(--scrollbar-hover);
+    }
+  
+    /* For Firefox */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar) var(--scrollbar-hover);
+    }
 }
